@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { loginStyles, colors } from '../styles/loginStyles';
 
 type Props = TextInputProps & {
-  icon: 'mail' | 'lock';
+  icon: string;
 };
 
 export default function InputField({ icon, ...rest }: Props) {

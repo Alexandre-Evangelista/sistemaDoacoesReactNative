@@ -30,7 +30,7 @@ async function handleLogin() {
   try {
     await login(email, senha);
 
-    navigation.navigate("Home"); // 👈 SÓ ISSO
+    navigation.navigate("Home"); 
 
   } catch (error: any) {
     console.log("========== ERRO LOGIN ==========");
@@ -90,7 +90,7 @@ async function handleLogin() {
 
       <View style={loginStyles.footerRow}>
         <Text style={loginStyles.footerText}>Não tem conta? </Text>
-        <TouchableOpacity onPress={() => navigation?.navigate('SignUp')}>
+        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
           <Text style={loginStyles.footerLink}>Cadastre-se</Text>
         </TouchableOpacity>
       </View>
