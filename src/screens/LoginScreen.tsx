@@ -3,43 +3,35 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/AntDesign';
 import { loginStyles } from '../styles/loginStyles';
 import InputField from '../components/InputField';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
+import { Role } from '../services/authServices';
 
 export default function LoginScreen({ navigation }: any) {
-  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<Role>('usuario');
+  const [identificador, setIdentificador] = useState(''); // email ou cnpj
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
 async function handleLogin() {
-  if (!email || !senha) {
-    Alert.alert("Atenção", "Preencha e-mail e senha.");
+  if (!identificador || !senha) {
+    Alert.alert('Atenção', 'Preencha e-mail/CNPJ e senha.');
     return;
   }
-
   setLoading(true);
-
   try {
-    await login(email, senha);
-
-    navigation.navigate("Home"); 
-
+    await login(identificador, senha);
+    navigation.navigate('Home');
   } catch (error: any) {
-    console.log("========== ERRO LOGIN ==========");
-    console.log(error);
-
-    Alert.alert(
-      "Erro ao entrar",
-      JSON.stringify(error.response?.data ?? error.message)
-    );
+    Alert.alert('Erro ao entrar', JSON.stringify(error.response?.data ?? error.message));
   } finally {
     setLoading(false);
   }
@@ -51,14 +43,13 @@ async function handleLogin() {
       <Text style={loginStyles.subtitle}>Entre para continuar doando</Text>
 
       <InputField
-        icon="mail"
-        placeholder="Seu e-mail"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-        editable={!loading}
-      />
+  icon="mail"
+  placeholder="E-mail ou CNPJ"
+  autoCapitalize="none"
+  value={identificador}
+  onChangeText={setIdentificador}
+  editable={!loading}
+/>
 
       <InputField
         icon="lock"
@@ -90,7 +81,7 @@ async function handleLogin() {
 
       <View style={loginStyles.footerRow}>
         <Text style={loginStyles.footerText}>Não tem conta? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
           <Text style={loginStyles.footerLink}>Cadastre-se</Text>
         </TouchableOpacity>
       </View>

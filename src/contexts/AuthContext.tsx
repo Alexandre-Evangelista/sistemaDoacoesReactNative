@@ -1,48 +1,48 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import authService from '../services/authServices';
-
-type Usuario = {
-  email: string;
-  nome: string;
-  foto?: string | null;
-  tipo?: string | null;
-};
+import authService, { Usuario, Ong, Role } from '../services/authServices';
 
 type AuthContextData = {
-  usuario: Usuario | null;
+  conta: Usuario | Ong | null;
+  role: Role | null;
   loading: boolean;
-  login: (email: string, senha: string) => Promise<void>;
+  login: (identificador: string, senha: string) => Promise<void>; // 👈 sem role aqui
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [conta, setConta] = useState<Usuario | Ong | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function carregarSessao() {
-      const saved = await authService.getUsuarioSalvo();
-      if (saved) setUsuario(saved);
+      const saved = await authService.getSessaoSalva();
+      if (saved) {
+        setConta(saved.conta);
+        setRole(saved.role);
+      }
       setLoading(false);
     }
     carregarSessao();
   }, []);
 
-  async function login(email: string, senha: string) {
-    const data = await authService.loginUsuario(email, senha);
-    await authService.salvarSessao(data);
-    if (data.usuario) setUsuario(data.usuario);
-  }
+async function login(identificador: string, senha: string) {
+  const data = await authService.loginAuto(identificador, senha);
+  await authService.salvarSessao(data);
+  setConta(data.conta);
+  setRole(data.role);
+}
 
   async function logout() {
     await authService.logout();
-    setUsuario(null);
+    setConta(null);
+    setRole(null);
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, loading, login, logout }}>
+    <AuthContext.Provider value={{ conta, role, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
