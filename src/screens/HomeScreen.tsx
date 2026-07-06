@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState,useCallback } from "react";
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,6 +10,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/AntDesign";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ong } from "../services/authServices";
 
 import api from "../services/api";
 import { homeStyles } from "../styles/homeStyles";
@@ -18,30 +20,34 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function HomeScreen({ navigation }: any) {
   const { conta, role, logout } = useAuth();
-const isOng = role === "ong";
+  const isOng = role === "ong";
+  const contaOng = isOng ? (conta as Ong) : null;
+
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
 
-  useEffect(() => {
-    carregarCampanhas();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      carregarCampanhas();
+    }, [])
+  );
 
   async function handleLogout() {
     await logout();
     navigation.replace("Login");
   }
 
-  async function carregarCampanhas() {
-    try {
-      const response = await api.get("/campanha");
-      setCampanhas(response.data);
-    } catch (error) {
-      console.log("Erro:", error);
-    } finally {
-      setLoading(false);
-    }
+async function carregarCampanhas() {
+  try {
+    const response = await api.get("/campanha");
+    setCampanhas(response.data);
+  } catch (error) {
+    console.log("Erro:", error);
+  } finally {
+    setLoading(false);
   }
+}
 
   const campanhasFiltradas = campanhas.filter(
     (campanha) =>
@@ -83,7 +89,7 @@ const isOng = role === "ong";
 
       <View style={homeStyles.sectionRow}>
   <Text style={homeStyles.sectionTitle}>
-    {isOng ? "Minhas campanhas" : "Campanhas em destaque"}
+    {"Campanhas em destaque"}
   </Text>
 
   {isOng && (

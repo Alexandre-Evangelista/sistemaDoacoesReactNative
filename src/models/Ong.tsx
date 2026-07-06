@@ -12,6 +12,6 @@ export interface ONG {
   longitude?: number | null;
 
   campanhas?: Campanha[];
-  avaliacoes?: any[];     // se não tiver model de Avaliacao ainda
+  avaliacoes?: any[]; 
   doacoes?: Doacao[];
 }

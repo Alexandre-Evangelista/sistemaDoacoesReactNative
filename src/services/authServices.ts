@@ -104,7 +104,6 @@ class AuthService {
   try {
     return await this.loginUsuario(identificador, senha);
   } catch (error: any) {
-    // se não achou como usuário, tenta como ONG
     const msg = error?.response?.data;
     const naoEhUsuario =
       error?.response?.status === 400 &&
@@ -113,7 +112,7 @@ class AuthService {
     if (naoEhUsuario) {
       return await this.loginOng(identificador, senha);
     }
-    throw error; // outro erro (ex: senha incorreta) -> repassa
+    throw error;
   }
 }
 }
