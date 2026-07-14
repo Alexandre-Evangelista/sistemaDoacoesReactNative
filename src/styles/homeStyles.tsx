@@ -7,19 +7,10 @@ export const homeStyles = StyleSheet.create({
     padding: 20,
   },
 
-  // ── Header ──────────────────────────────
-  header: {
-  marginBottom: 20,
-},
-headerTop: {
-  flexDirection: "row",
-  justifyContent: "flex-end",  // botão sair grudado na direita
-  marginBottom: 8,
-},
-headerBottom: {
-  flexDirection: "row",
-  alignItems: "center",
-},
+  // ── Saudação ────────────────────────────
+  greeting: {
+    marginBottom: 15,
+  },
   hello: {
     fontSize: 16,
     color: "#888",
@@ -28,22 +19,6 @@ headerBottom: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#1F2937",
-  },
-
-  // ── Botão Sair ──────────────────────────
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  logoutText: {
-    color: "#DC2626",
-    fontWeight: "600",
-    fontSize: 13,
   },
 
   // ── Busca ───────────────────────────────
