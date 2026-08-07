@@ -6,10 +6,10 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
+  Image, // <-- Importação do Image adicionada aqui
 } from "react-native";
 
-import {signUpStyles} from "../styles/signUpStyles";
+import { signUpStyles } from "../styles/signUpStyles";
 import * as Location from "expo-location";
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
@@ -139,85 +139,91 @@ export default function SignUpScreen({ navigation }: any) {
   const somenteNumeros = documento.replace(/\D/g, "");
   const isCNPJ = somenteNumeros.length === 14;
 
-return (
-  <SafeAreaView style={signUpStyles.container}>
-    <View style={signUpStyles.card}>
-      <Text style={signUpStyles.title}>Bem-vindo 👋</Text>
+  return (
+    <SafeAreaView style={signUpStyles.container}>
+      {/* 
+        Dica: Como a tela de cadastro tem muitos campos, talvez seja ideal 
+        envolver este View em um <ScrollView> no futuro, caso o teclado cubra os inputs em telas menores. 
+      */}
+      <View style={signUpStyles.card}>
+        
+        {/* Textos removidos e substituídos pela Logo */}
+        <View style={{ alignItems: 'center', marginBottom: 25 }}>
+          <Image 
+            source={require('../../assets/logo.png')} 
+            style={{ width: 140, height: 140, resizeMode: 'contain' }} 
+          />
+        </View>
 
-      <Text style={signUpStyles.subtitle}>
-        Se registre para continuar doando
-      </Text>
+        <InputField
+          icon="user"
+          placeholder={
+            isCNPJ ? "Nome da ONG" : "Seu nome"
+          }
+          value={nome}
+          onChangeText={setNome}
+        />
 
-      <InputField
-        icon="user"
-        placeholder={
-          isCNPJ ? "Nome da ONG" : "Seu nome"
-        }
-        value={nome}
-        onChangeText={setNome}
-      />
+        <InputField
+          icon="mail"
+          placeholder="Seu e-mail"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+        />
 
-      <InputField
-        icon="mail"
-        placeholder="Seu e-mail"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-      />
+        <InputField
+          icon="credit-card"
+          placeholder="CPF ou CNPJ"
+          value={documento}
+          onChangeText={setDocumento}
+          keyboardType="numeric"
+        />
 
-      <InputField
-        icon="credit-card"
-        placeholder="CPF ou CNPJ"
-        value={documento}
-        onChangeText={setDocumento}
-        keyboardType="numeric"
-      />
+        <InputField
+          icon="phone"
+          placeholder="Telefone"
+          value={telefone}
+          onChangeText={setTelefone}
+          keyboardType="phone-pad"
+        />
 
-      <InputField
-        icon="phone"
-        placeholder="Telefone"
-        value={telefone}
-        onChangeText={setTelefone}
-        keyboardType="phone-pad"
-      />
+        <InputField
+          icon="lock"
+          placeholder="Sua senha"
+          value={senha}
+          onChangeText={setSenha}
+          secureTextEntry
+        />
 
-      <InputField
-        icon="lock"
-        placeholder="Sua senha"
-        value={senha}
-        onChangeText={setSenha}
-        secureTextEntry
-      />
+        <PrimaryButton
+          label={loading ? "Cadastrando..." : "Registrar"}
+          onPress={handleCadastro}
+        />
 
-      <PrimaryButton
-        label={loading ? "Cadastrando..." : "Registrar"}
-        onPress={handleCadastro}
-      />
+        <View style={signUpStyles.separator}>
+          <View style={signUpStyles.line} />
+          <Text style={signUpStyles.separatorText}>ou</Text>
+          <View style={signUpStyles.line} />
+        </View>
 
-      <View style={signUpStyles.separator}>
-        <View style={signUpStyles.line} />
-        <Text style={signUpStyles.separatorText}>ou</Text>
-        <View style={signUpStyles.line} />
-      </View>
-
-      <TouchableOpacity style={signUpStyles.googleButton}>
-        <Text style={signUpStyles.googleText}>
-          Continuar com Google
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("Login")}
-      >
-        <Text style={signUpStyles.footerText}>
-          Já tem registro?{" "}
-          <Text style={signUpStyles.loginText}>
-            Faça Login
+        <TouchableOpacity style={signUpStyles.googleButton}>
+          <Text style={signUpStyles.googleText}>
+            Continuar com Google
           </Text>
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </SafeAreaView>
-);
-}
+        </TouchableOpacity>
 
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Login")}
+        >
+          <Text style={signUpStyles.footerText}>
+            Já tem registro?{" "}
+            <Text style={signUpStyles.loginText}>
+              Faça Login
+            </Text>
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
