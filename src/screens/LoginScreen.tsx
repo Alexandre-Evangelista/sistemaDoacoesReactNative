@@ -22,7 +22,7 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-/*async function handleLogin() {
+async function handleLogin() {
   if (!identificador || !senha) {
     Alert.alert('Atenção', 'Preencha e-mail/CNPJ e senha.');
     return;
@@ -36,9 +36,9 @@ export default function LoginScreen({ navigation }: any) {
   } finally {
     setLoading(false);
   }
-}*/
+}
 
-async function handleLogin() {
+/*async function handleLogin() {
   setLoading(true);
   try {
     // Simulando um tempo de carregamento para a animação do botão (opcional)
@@ -52,7 +52,7 @@ async function handleLogin() {
   } finally {
     setLoading(false);
   }
-}
+}*/
 
   return (
     <SafeAreaView style={loginStyles.container}>

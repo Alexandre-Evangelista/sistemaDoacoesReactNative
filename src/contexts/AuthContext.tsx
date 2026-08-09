@@ -5,8 +5,9 @@ type AuthContextData = {
   conta: Usuario | Ong | null;
   role: Role | null;
   loading: boolean;
-  login: (identificador: string, senha: string) => Promise<void>; // 👈 sem role aqui
+  login: (identificador: string, senha: string) => Promise<void>; 
   logout: () => Promise<void>;
+  excluirConta: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -41,11 +42,27 @@ async function login(identificador: string, senha: string) {
     setRole(null);
   }
 
+  async function excluirConta() {
+    if (!conta || !role) {
+      throw new Error("Nenhuma conta logada");
+    }
+
+    if (role === "ong") {
+      await authService.deleteOng((conta as Ong).cnpj);
+    } else {
+      await authService.deleteUsuario((conta as Usuario).email);
+    }
+
+    setConta(null);
+    setRole(null);
+  }
+
   return (
-    <AuthContext.Provider value={{ conta, role, loading, login, logout }}>
+    <AuthContext.Provider value={{ conta, role, loading, login, logout, excluirConta }}>
       {children}
     </AuthContext.Provider>
   );
+  
 }
 
 export function useAuth() {

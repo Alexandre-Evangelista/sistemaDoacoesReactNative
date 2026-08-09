@@ -21,6 +21,7 @@ import BottomMenu from "../components/BottomMenu";
 import { Campanha } from "../models/Campanha";
 import { useAuth } from "../contexts/AuthContext";
 
+
 export default function HomeScreen({ navigation }: any) {
   const { conta, role, logout } = useAuth();
   const isOng = role === "ong";
@@ -42,7 +43,7 @@ export default function HomeScreen({ navigation }: any) {
     navigation.replace("Login");
   }
 
-  /*async function carregarCampanhas() {
+  async function carregarCampanhas() {
     try {
       const response = await api.get("/campanha");
       setCampanhas(response.data);
@@ -51,10 +52,10 @@ export default function HomeScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  }*/
+  }
 
 
-    async function carregarCampanhas() {
+  /*  async function carregarCampanhas() {
   try {
     // Mock: Dados falsos simulando a resposta que viria do banco de dados
     const dadosFalsos = [
@@ -83,7 +84,7 @@ export default function HomeScreen({ navigation }: any) {
   } finally {
     setLoading(false);
   }
-}
+}*/
 
   const campanhasFiltradas = campanhas.filter(
     (campanha) =>

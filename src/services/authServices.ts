@@ -115,6 +115,17 @@ class AuthService {
     throw error;
   }
 }
+
+async deleteUsuario(email: string) {
+    await api.delete(`/usuario/${email}`);
+    await this.logout();
+  }
+
+  async deleteOng(cnpj: string) {
+    await api.delete(`/ongs/${cnpj}`);
+    await this.logout();
+  }
+
 }
 
 export default new AuthService();
