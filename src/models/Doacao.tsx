@@ -7,11 +7,11 @@ export interface Doacao {
   datadoacao: string;
   quantidade: number;
   tipo: string;
-
   email?: string | null;
   cnpj?: string | null;
   IDcampanha?: string | null;
-
+  latitude?: number | null; 
+  longitude?: number | null; 
   usuario?: Usuario;
   ong?: ONG;
   campanha?: Campanha;

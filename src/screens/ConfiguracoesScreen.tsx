@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
-
 import { configuracoesStyles as styles } from '../styles/configuracoesStyles';
 import { colors } from '../styles/loginStyles';
+import { useTheme } from '../contexts/ThemeContext'; 
 
 export default function ConfiguracoesScreen({ navigation }: any) {
   const [notificacoes, setNotificacoes] = useState(true);
-  const [modoEscuro, setModoEscuro] = useState(false);
+  
+  
+  const { isDarkMode, toggleTheme } = useTheme();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,15 +43,14 @@ export default function ConfiguracoesScreen({ navigation }: any) {
             <Text style={styles.optionText}>Modo Escuro</Text>
           </View>
           <Switch 
-            value={modoEscuro} 
-            onValueChange={setModoEscuro}
+            value={isDarkMode} 
+            onValueChange={toggleTheme} 
             trackColor={{ false: colors.inputBorder, true: colors.green }}
             thumbColor="#FFF"
           />
         </View>
 
         <Text style={styles.sectionTitle}>Conta e Segurança</Text>
-
         <TouchableOpacity style={styles.optionRow} activeOpacity={0.7}>
           <View style={styles.optionTextContainer}>
             <Icon name="lock" size={20} color={colors.textPrimary} />
@@ -64,7 +65,6 @@ export default function ConfiguracoesScreen({ navigation }: any) {
             <Text style={[styles.optionText, { color: '#DC2626' }]}>Excluir Conta</Text>
           </View>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
