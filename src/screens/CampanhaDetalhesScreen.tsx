@@ -9,11 +9,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   TextInput,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
-import * as Location from 'expo-location';
 import PrimaryButton from '../components/PrimaryButton';
 import LocationPickerMap from '../components/LocationPickerMap';
 import campanhaService from '../services/campanhaService';
@@ -21,6 +21,8 @@ import doacaoService, { Doacao } from '../services/doacaoService';
 import { useAuth } from '../contexts/AuthContext';
 import { doacoesStyles } from '../styles/doacoesStyles';
 import { colors } from '../styles/loginStyles';
+import { API_URL } from "../config/variaveis";
+
 
 export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   const { campanha: campanhaInicial } = route.params;
@@ -34,6 +36,9 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
       ? { latitude: campanha.latitude, longitude: campanha.longitude }
       : null
   );
+  const fotoUri = campanha.foto?.startsWith('http')
+    ? campanha.foto
+    : `${API_URL}/uploads/ong/${encodeURIComponent(campanha.foto)}`;
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
@@ -44,9 +49,9 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   const [quantidadeEdit, setQuantidadeEdit] = useState('');
   const [tipoEdit, setTipoEdit] = useState('');
 
-  // Formulário de nova doação
-  const [mostrarFormDoacao, setMostrarFormDoacao] = useState(false);
-  const [novaQuantidade, setNovaQuantidade] = useState('');
+  // Modal de nova doação
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [novaQuantidade, setNovaQuantidade] = useState('1');
   const [novoTipo, setNovoTipo] = useState('');
   const [enviandoDoacao, setEnviandoDoacao] = useState(false);
 
@@ -75,6 +80,12 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
     }
   }
 
+  function abrirModalDoacao() {
+    setNovoTipo('');
+    setNovaQuantidade('1');
+    setModalVisivel(true);
+  }
+
   async function handleConfirmarDoacao() {
     const quantidadeNum = Number(novaQuantidade);
     if (!novoTipo || !quantidadeNum || quantidadeNum <= 0) {
@@ -97,11 +108,11 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
         IDcampanha: campanha.id,
       });
 
-      setNovaQuantidade('');
+      setModalVisivel(false);
+      setNovaQuantidade('1');
       setNovoTipo('');
-      setMostrarFormDoacao(false);
       await carregarDoacoes();
-      Alert.alert('Obrigado!', 'Sua doação foi registrada com sucesso.');
+      Alert.alert('Obrigado!', `Sua doação para a ${campanha.ong?.nome || 'ONG'} foi registrada. Agradecemos o apoio!`);
     } catch (error: any) {
       console.log('ERRO CRIAR DOACAO:', error.response?.data);
       Alert.alert('Erro', error.response?.data?.message || 'Não foi possível registrar a doação.');
@@ -224,7 +235,12 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <Image source={{ uri: campanha.foto }} style={styles.image} />
+        <Image
+          source={{ uri: fotoUri }}
+          style={styles.image}
+          onError={(e) => console.log("ERRO IMAGEM:", e.nativeEvent.error)}
+          onLoad={() => console.log("IMAGEM OK:", campanha.foto)}
+        />
 
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#FFF" />
@@ -371,54 +387,55 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
                   )}
                 </View>
               ))}
-
-              {mostrarFormDoacao && (
-                <View style={styles.novaDoacaoForm}>
-                  <TextInput
-                    style={styles.smallInput}
-                    placeholder="Tipo (ex: Cestas Básicas)"
-                    value={novoTipo}
-                    onChangeText={setNovoTipo}
-                  />
-                  <TextInput
-                    style={styles.smallInput}
-                    placeholder="Quantidade"
-                    value={novaQuantidade}
-                    onChangeText={setNovaQuantidade}
-                    keyboardType="numeric"
-                  />
-                  <View style={styles.editActions}>
-                    <TouchableOpacity
-                      style={styles.cancelButton}
-                      onPress={() => {
-                        setMostrarFormDoacao(false);
-                        setNovoTipo('');
-                        setNovaQuantidade('');
-                      }}
-                      disabled={enviandoDoacao}
-                    >
-                      <Text style={styles.cancelButtonText}>Cancelar</Text>
-                    </TouchableOpacity>
-                    {enviandoDoacao ? (
-                      <ActivityIndicator size="small" color={colors.greenDark} style={{ flex: 1 }} />
-                    ) : (
-                      <View style={{ flex: 1 }}>
-                        <PrimaryButton label="Confirmar doação" onPress={handleConfirmarDoacao} />
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )}
             </View>
           )}
         </View>
       </ScrollView>
 
-      {ehUsuario && !editando && !mostrarFormDoacao && (
+      {ehUsuario && !editando && (
         <View style={styles.footer}>
-          <PrimaryButton label="Fazer uma Doação" onPress={() => setMostrarFormDoacao(true)} />
+          <PrimaryButton label="Fazer uma Doação" onPress={abrirModalDoacao} />
         </View>
       )}
+
+      {/* Modal de nova doação - estilo igual ao anterior */}
+      <Modal visible={modalVisivel} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Detalhes da Doação</Text>
+
+            <Text style={styles.label}>O que você vai doar?</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: Cesta Básica, Agasalhos..."
+              value={novoTipo}
+              onChangeText={setNovoTipo}
+            />
+
+            <Text style={styles.label}>Quantidade</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 2"
+              keyboardType="numeric"
+              value={novaQuantidade}
+              onChangeText={setNovaQuantidade}
+            />
+
+            {enviandoDoacao ? (
+              <ActivityIndicator size="large" color="#16A34A" style={{ marginTop: 24 }} />
+            ) : (
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisivel(false)}>
+                  <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalConfirmButton} onPress={handleConfirmarDoacao}>
+                  <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -469,8 +486,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: 'center',
   },
   saveSmallButtonText: { color: '#FFF', fontWeight: '700' },
-  novaDoacaoForm: {
-    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
-    padding: 16, marginTop: 8,
-  },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginBottom: 16, textAlign: 'center' },
+  label: { fontSize: 14, fontWeight: '600', color: '#4B5563', marginBottom: 8, marginTop: 12 },
+  input: { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 14, fontSize: 16, color: '#1F2937', borderWidth: 1, borderColor: '#E5E7EB' },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 },
+  modalCancelButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, marginRight: 8 },
+  modalCancelButtonText: { color: '#4B5563', fontWeight: 'bold', fontSize: 16 },
+  modalConfirmButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#16A34A', borderRadius: 12, marginLeft: 8 },
+  modalConfirmButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 });

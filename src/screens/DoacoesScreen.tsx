@@ -1,45 +1,56 @@
-import React from 'react';
-import { View, Text, FlatList } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import { doacoesStyles as styles } from '../styles/doacoesStyles';
 import { colors } from '../styles/loginStyles';
 import BottomMenu from '../components/BottomMenu';
+import doacaoService, { Doacao } from '../services/doacaoService';
 
-const doacoesMock = [
-  {
-    id: "1",
-    data: "12 Jul 2026",
-    ong: "ONG Esperança",
-    quantidade: 2,
-    tipo: "Cestas Básicas",
-    status: "Concluída"
-  },
-  {
-    id: "2",
-    data: "05 Jun 2026",
-    ong: "Ação Solidária",
-    quantidade: 15,
-    tipo: "Peças de Roupa",
-    status: "Concluída"
-  },
-  {
-    id: "3",
-    data: "10 Mai 2026",
-    ong: "Abrigo Animal",
-    quantidade: 10,
-    tipo: "Kg de Ração",
-    status: "Concluída"
+function formatarData(dataISO: string) {
+  try {
+    const data = new Date(dataISO);
+    return data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return dataISO;
   }
-];
+}
 
 export default function DoacoesScreen({ navigation }: any) {
-  function renderItem({ item }: any) {
+  const [doacoes, setDoacoes] = useState<Doacao[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregarDoacoes = useCallback(async () => {
+    try {
+      setErro(null);
+      const data = await doacaoService.listarDoacoes();
+      setDoacoes(data);
+    } catch (error: any) {
+      setErro(error?.response?.data?.message ?? 'Não foi possível carregar suas doações.');
+    } finally {
+      setCarregando(false);
+      setAtualizando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarDoacoes();
+  }, [carregarDoacoes]);
+
+  function handleRefresh() {
+    setAtualizando(true);
+    carregarDoacoes();
+  }
+
+  function renderItem({ item }: { item: Doacao }) {
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.ongName}>{item.ong}</Text>
-          <Text style={styles.dateText}>{item.data}</Text>
+          
+          <Text style={styles.ongName}>{item.tipo ?? 'Doação'}</Text>
+          <Text style={styles.dateText}>{formatarData(item.datadoacao)}</Text>
         </View>
         <View style={styles.cardBody}>
           <View style={styles.iconBox}>
@@ -47,7 +58,7 @@ export default function DoacoesScreen({ navigation }: any) {
           </View>
           <View style={styles.donationDetails}>
             <Text style={styles.quantityText}>{item.quantidade}x {item.tipo}</Text>
-            <Text style={styles.statusText}>{item.status}</Text>
+            <Text style={styles.statusText}>Concluída</Text>
           </View>
         </View>
       </View>
@@ -59,13 +70,33 @@ export default function DoacoesScreen({ navigation }: any) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Minhas Doações</Text>
       </View>
-      <FlatList
-        data={doacoesMock}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
-        showsVerticalScrollIndicator={false}
-      />
+
+      {carregando ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.greenDark} />
+        </View>
+      ) : erro ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+          <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>{erro}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={doacoes}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={atualizando} onRefresh={handleRefresh} colors={[colors.greenDark]} />
+          }
+          ListEmptyComponent={
+            <View style={{ paddingTop: 40, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary }}>Nenhuma doação encontrada.</Text>
+            </View>
+          }
+        />
+      )}
+
       <BottomMenu navigation={navigation} activeRoute="Doacoes" />
     </SafeAreaView>
   );

@@ -19,7 +19,6 @@ class DoacaoService {
     return response.data;
   }
 
-  // Assumindo que o backend retorna a lista de doações do usuário logado (via token)
   async listarDoacoes(): Promise<Doacao[]> {
     const response = await api.get('/doacao/usuario');
     return response.data;

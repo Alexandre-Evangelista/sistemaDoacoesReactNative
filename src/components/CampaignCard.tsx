@@ -3,6 +3,7 @@ import { Text, ImageBackground, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { homeStyles } from "../styles/homeStyles";
 import { Campanha } from "../models/Campanha";
+import { API_URL } from "../config/variaveis";
 
 interface Props {
   campanha: Campanha;
@@ -10,7 +11,7 @@ interface Props {
 
 export default function CampaignCard({ campanha }: Props) {
   const navigation = useNavigation<any>();
-  const uri = campanha.foto;
+  const uri = `${API_URL}/uploads/ong/${encodeURIComponent(campanha.foto)}`;
 
   return (
     <TouchableOpacity
@@ -22,17 +23,18 @@ export default function CampaignCard({ campanha }: Props) {
         source={{ uri }}
         style={homeStyles.image}
         imageStyle={{ borderRadius: 15 }}
-        onError={(e) => console.log(e.nativeEvent.error)}
+        onError={(e) => console.log("ERRO IMAGEM:", e.nativeEvent.error)}
+        onLoad={() => console.log("IMAGEM OK:", campanha.foto)}
       />
-      
+
       <Text style={homeStyles.cardTitle}>
         {campanha.nome}
       </Text>
-      
+
       <Text style={homeStyles.cardSubtitle}>
         {campanha.descricao}
       </Text>
-      
+
       <Text style={homeStyles.location}>
         📍 {campanha.ong?.nome ?? "ONG"}
       </Text>

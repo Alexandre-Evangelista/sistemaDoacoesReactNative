@@ -71,15 +71,12 @@ export default function ConfiguracoesScreen({ navigation }: any) {
             <Icon name="moon" size={20} color={colors.textPrimary} />
             <Text style={styles.optionText}>Modo Escuro</Text>
           </View>
-          <Switch
-            value={modoEscuro}
-            onValueChange={setModoEscuro}
-          <Switch 
-            value={isDarkMode} 
-            onValueChange={toggleTheme} 
-            trackColor={{ false: colors.inputBorder, true: colors.green }}
-            thumbColor="#FFF"
-          />
+        <Switch
+          value={isDarkMode}
+          onValueChange={toggleTheme}
+          trackColor={{ false: colors.inputBorder, true: colors.green }}
+          thumbColor="#FFF"
+        />
         </View>
 
         <Text style={styles.sectionTitle}>Conta e Segurança</Text>
