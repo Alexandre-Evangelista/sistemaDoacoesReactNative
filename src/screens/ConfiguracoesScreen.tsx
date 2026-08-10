@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Switch, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
-
 import { configuracoesStyles as styles } from '../styles/configuracoesStyles';
 import { colors } from '../styles/loginStyles';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext'; 
 
 export default function ConfiguracoesScreen({ navigation }: any) {
   const [notificacoes, setNotificacoes] = useState(true);
@@ -37,6 +37,9 @@ export default function ConfiguracoesScreen({ navigation }: any) {
       ]
     );
   }
+  
+  
+  const { isDarkMode, toggleTheme } = useTheme();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,13 +74,15 @@ export default function ConfiguracoesScreen({ navigation }: any) {
           <Switch
             value={modoEscuro}
             onValueChange={setModoEscuro}
+          <Switch 
+            value={isDarkMode} 
+            onValueChange={toggleTheme} 
             trackColor={{ false: colors.inputBorder, true: colors.green }}
             thumbColor="#FFF"
           />
         </View>
 
         <Text style={styles.sectionTitle}>Conta e Segurança</Text>
-
         <TouchableOpacity style={styles.optionRow} activeOpacity={0.7}>
           <View style={styles.optionTextContainer}>
             <Icon name="lock" size={20} color={colors.textPrimary} />
@@ -98,7 +103,6 @@ export default function ConfiguracoesScreen({ navigation }: any) {
           </View>
           {excluindo && <ActivityIndicator size="small" color="#DC2626" />}
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );

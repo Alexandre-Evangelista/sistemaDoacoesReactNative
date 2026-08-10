@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
+import * as Location from 'expo-location';
 import PrimaryButton from '../components/PrimaryButton';
 import LocationPickerMap from '../components/LocationPickerMap';
 import campanhaService from '../services/campanhaService';
