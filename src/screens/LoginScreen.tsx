@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image, // <-- Importação do Image adicionada aqui
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/AntDesign';
@@ -37,19 +38,41 @@ async function handleLogin() {
   }
 }
 
+/*async function handleLogin() {
+  setLoading(true);
+  try {
+    // Simulando um tempo de carregamento para a animação do botão (opcional)
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Ignoramos a validação de email/senha e a chamada na API
+    // Vamos direto para a tela Home
+    navigation.navigate('Home');
+  } catch (error: any) {
+    Alert.alert('Erro ao entrar', error.message);
+  } finally {
+    setLoading(false);
+  }
+}*/
+
   return (
     <SafeAreaView style={loginStyles.container}>
-      <Text style={loginStyles.title}>Bem-vindo 👋</Text>
-      <Text style={loginStyles.subtitle}>Entre para continuar doando</Text>
+      
+      {/* Textos removidos e substituídos pela Logo */}
+      <View style={{ alignItems: 'center', marginBottom: 40, marginTop: 20 }}>
+        <Image 
+          source={require('../../assets/logo.png')} 
+          style={{ width: 160, height: 160, resizeMode: 'contain' }} 
+        />
+      </View>
 
       <InputField
-  icon="mail"
-  placeholder="E-mail ou CNPJ"
-  autoCapitalize="none"
-  value={identificador}
-  onChangeText={setIdentificador}
-  editable={!loading}
-/>
+        icon="mail"
+        placeholder="E-mail ou CNPJ"
+        autoCapitalize="none"
+        value={identificador}
+        onChangeText={setIdentificador}
+        editable={!loading}
+      />
 
       <InputField
         icon="lock"

@@ -8,6 +8,12 @@ export type CriarCampanhaPayload = {
   longitude?: number;
   cnpjOng: string;
 };
+export type AtualizarCampanhaPayload = {
+  descricao?: string;
+  latitude?: number;
+  longitude?: number;
+  cnpjOng: string;
+};
 
 class CampanhaService {
   async criarCampanha(data: CriarCampanhaPayload) {
@@ -28,6 +34,16 @@ class CampanhaService {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
+    return response.data;
+  }
+
+  async atualizarCampanha(id: string, data: AtualizarCampanhaPayload) {
+    const response = await api.put(`/campanha/${id}`, data);
+    return response.data;
+  }
+
+  async deletarCampanha(id: string) {
+    const response = await api.delete(`/campanha/${id}`);
     return response.data;
   }
 }

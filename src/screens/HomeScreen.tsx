@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Image, // <-- Importação do Image adicionada aqui
 } from "react-native";
 import Icon from "react-native-vector-icons/AntDesign";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +20,7 @@ import Header from "../components/Header";
 import BottomMenu from "../components/BottomMenu";
 import { Campanha } from "../models/Campanha";
 import { useAuth } from "../contexts/AuthContext";
+
 
 export default function HomeScreen({ navigation }: any) {
   const { conta, role, logout } = useAuth();
@@ -52,6 +54,38 @@ export default function HomeScreen({ navigation }: any) {
     }
   }
 
+
+  /*  async function carregarCampanhas() {
+  try {
+    // Mock: Dados falsos simulando a resposta que viria do banco de dados
+    const dadosFalsos = [
+      {
+        id: "1",
+        nome: "Campanha do Agasalho",
+        descricao: "Arrecadação de cobertores para o inverno.",
+        // Trocamos o link da imagem
+        foto: "https://picsum.photos/seed/campanha1/400/200", 
+        ong: { nome: "ONG Esperança" }
+      },
+      {
+        id: "2",
+        nome: "Cestas Básicas",
+        descricao: "Ajude famílias em situação de vulnerabilidade.",
+        // Trocamos o link da imagem
+        foto: "https://picsum.photos/seed/campanha2/400/200",
+        ong: { nome: "Ação Solidária" }
+      }
+    ];
+
+    // Colocamos os dados falsos na tela ao invés de usar o response.data
+    setCampanhas(dadosFalsos as any);
+  } catch (error) {
+    console.log("Erro:", error);
+  } finally {
+    setLoading(false);
+  }
+}*/
+
   const campanhasFiltradas = campanhas.filter(
     (campanha) =>
       campanha.nome?.toLowerCase().includes(busca.toLowerCase()) ||
@@ -63,9 +97,13 @@ export default function HomeScreen({ navigation }: any) {
       <Header onLogout={handleLogout} />
 
       <View style={{ paddingTop: insets.top + 5 }}>
-        <View style={homeStyles.greeting}>
-          <Text style={homeStyles.hello}>Olá,</Text>
-          <Text style={homeStyles.name}>{conta?.nome ?? "Usuário"} 👋</Text>
+        
+        {/* Textos de saudação removidos e substituídos pela Logo */}
+        <View style={{ marginBottom: 20, marginTop: 10 }}>
+          <Image 
+            source={require('../../assets/logo.png')} 
+            style={{ width: 120, height: 40, resizeMode: 'contain' }} 
+          />
         </View>
 
         <TextInput
