@@ -1,22 +1,23 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import Icon from "react-native-vector-icons/AntDesign";
-import { headerStyles } from "../styles/headerStyles";
+import React, { useMemo } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Icon from 'react-native-vector-icons/AntDesign';
+import { useTheme } from '../contexts/ThemeContext';
+import { createHeaderStyles } from '../styles/headerStyles';
 
-interface HeaderProps {
-  onLogout: () => void;
-}
-
-export default function Header({ onLogout }: HeaderProps) {
+export default function Header({ onLogout }: { onLogout: () => void | Promise<void> }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createHeaderStyles(colors), [colors]);
   return (
-    <View style={headerStyles.header}>
+    <View style={styles.header}>
       <TouchableOpacity
         onPress={onLogout}
-        style={headerStyles.logoutButton}
+        style={styles.logoutButton}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Sair do aplicativo"
       >
-        <Icon name="logout" size={14} color="#DC2626" style={headerStyles.logoutIcon} />
-        <Text style={headerStyles.logoutText}>Sair</Text>
+        <Icon name="logout" size={14} color={colors.danger} style={styles.logoutIcon} />
+        <Text style={styles.logoutText}>Sair</Text>
       </TouchableOpacity>
     </View>
   );

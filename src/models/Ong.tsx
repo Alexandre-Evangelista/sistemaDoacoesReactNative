@@ -4,6 +4,8 @@ import { Doacao } from './Doacao';
 export interface ONG {
   cnpj: string;
   nome: string;
+  email?: string | null;
+  tipo?: boolean | null;
   telefone?: string | null;
   descricao?: string | null;
   foto?: string | null;
@@ -12,6 +14,6 @@ export interface ONG {
   longitude?: number | null;
 
   campanhas?: Campanha[];
-  avaliacoes?: any[]; 
+  avaliacoes?: unknown[];
   doacoes?: Doacao[];
 }

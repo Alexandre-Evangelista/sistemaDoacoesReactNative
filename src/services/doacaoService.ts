@@ -1,7 +1,9 @@
+import type { Doacao } from '../models/Doacao';
 import api from './api';
 
-export type Doacao = {
-  id: string;
+export type { Doacao };
+
+export type CriarDoacaoPayload = {
   datadoacao: string;
   quantidade: number;
   tipo: string;
@@ -10,13 +12,12 @@ export type Doacao = {
   IDcampanha?: string | null;
 };
 
-export type CriarDoacaoPayload = Omit<Doacao, 'id'>;
-export type AtualizarDoacaoPayload = Omit<Doacao, 'id' | 'email'>;
+export type AtualizarDoacaoPayload = Omit<CriarDoacaoPayload, 'email'>;
 
 class DoacaoService {
   async criarDoacao(data: CriarDoacaoPayload) {
     const response = await api.post('/doacao/usuario', data);
-    return response.data;
+    return response.data as Doacao;
   }
 
   async listarDoacoes(): Promise<Doacao[]> {
@@ -25,12 +26,12 @@ class DoacaoService {
   }
 
   async atualizarDoacao(id: string, data: AtualizarDoacaoPayload) {
-    const response = await api.put(`/doacao/usuario/${id}`, data);
-    return response.data;
+    const response = await api.put(`/doacao/usuario/${encodeURIComponent(id)}`, data);
+    return response.data as Doacao;
   }
 
   async deletarDoacao(id: string) {
-    const response = await api.delete(`/doacao/usuario/${id}`);
+    const response = await api.delete(`/doacao/usuario/${encodeURIComponent(id)}`);
     return response.data;
   }
 }

@@ -1,43 +1,36 @@
-import React from "react";
-import { Text, ImageBackground, TouchableOpacity } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { homeStyles } from "../styles/homeStyles";
-import { Campanha } from "../models/Campanha";
-import { API_URL } from "../config/variaveis";
+import React, { useMemo } from 'react';
+import { ImageBackground, Text, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Campanha } from '../models/Campanha';
+import type { RootStackParamList } from '../routes/types';
+import { createHomeStyles } from '../styles/homeStyles';
+import { resolveMediaUrl } from '../utils/media';
 
-interface Props {
-  campanha: Campanha;
-}
-
-export default function CampaignCard({ campanha }: Props) {
-  const navigation = useNavigation<any>();
-  const uri = `${API_URL}/uploads/ong/${encodeURIComponent(campanha.foto)}`;
+export default function CampaignCard({ campanha }: { campanha: Campanha }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createHomeStyles(colors), [colors]);
+  const uri = resolveMediaUrl(campanha.foto);
 
   return (
     <TouchableOpacity
-      style={homeStyles.card}
+      style={styles.card}
       activeOpacity={0.8}
-      onPress={() => navigation.navigate("CampanhaDetalhes", { campanha })}
+      onPress={() => navigation.navigate('CampanhaDetalhes', { campanha })}
+      accessibilityRole="button"
+      accessibilityLabel={`Abrir campanha ${campanha.nome}`}
     >
       <ImageBackground
-        source={{ uri }}
-        style={homeStyles.image}
+        source={uri ? { uri } : undefined}
+        style={styles.image}
         imageStyle={{ borderRadius: 15 }}
-        onError={(e) => console.log("ERRO IMAGEM:", e.nativeEvent.error)}
-        onLoad={() => console.log("IMAGEM OK:", campanha.foto)}
+        accessibilityLabel={`Imagem da campanha ${campanha.nome}`}
       />
-
-      <Text style={homeStyles.cardTitle}>
-        {campanha.nome}
-      </Text>
-
-      <Text style={homeStyles.cardSubtitle}>
-        {campanha.descricao}
-      </Text>
-
-      <Text style={homeStyles.location}>
-        📍 {campanha.ong?.nome ?? "ONG"}
-      </Text>
+      <Text style={styles.cardTitle}>{campanha.nome}</Text>
+      <Text style={styles.cardSubtitle}>{campanha.descricao}</Text>
+      <Text style={styles.location}>📍 {campanha.ong?.nome ?? 'ONG'}</Text>
     </TouchableOpacity>
   );
 }

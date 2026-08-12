@@ -1,149 +1,91 @@
-import React, { useState, useCallback } from "react";
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  View,
-  Text,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Image, // <-- Importação do Image adicionada aqui
-} from "react-native";
-import Icon from "react-native-vector-icons/AntDesign";
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ong } from "../services/authServices";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/AntDesign';
+import BottomMenu from '../components/BottomMenu';
+import CampaignCard from '../components/CampaignCard';
+import Header from '../components/Header';
+import PrimaryButton from '../components/PrimaryButton';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Campanha } from '../models/Campanha';
+import type { ScreenProps } from '../routes/types';
+import api from '../services/api';
+import { createHomeStyles } from '../styles/homeStyles';
 
-import api from "../services/api";
-import { homeStyles } from "../styles/homeStyles";
-import CampaignCard from "../components/CampaignCard";
-import Header from "../components/Header";
-import BottomMenu from "../components/BottomMenu";
-import { Campanha } from "../models/Campanha";
-import { useAuth } from "../contexts/AuthContext";
-
-
-export default function HomeScreen({ navigation }: any) {
-  const { conta, role, logout } = useAuth();
-  const isOng = role === "ong";
-  const contaOng = isOng ? (conta as Ong) : null;
-  const insets = useSafeAreaInsets();
-
+export default function HomeScreen({ navigation }: ScreenProps<'Home'>) {
+  const { role, logout } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createHomeStyles(colors), [colors]);
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busca, setBusca] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
 
-  useFocusEffect(
-    useCallback(() => {
-      carregarCampanhas();
-    }, [])
-  );
-
-  async function handleLogout() {
-    await logout();
-    navigation.replace("Login");
-  }
-
-  async function carregarCampanhas() {
+  const carregarCampanhas = useCallback(async () => {
+    setError(null);
     try {
-      const response = await api.get("/campanha");
-      setCampanhas(response.data);
-    } catch (error) {
-      console.log("Erro:", error);
+      const response = await api.get<Campanha[]>('/campanha');
+      setCampanhas(Array.isArray(response.data) ? response.data : []);
+    } catch {
+      setError('Não foi possível carregar as campanhas. Verifique sua conexão e tente novamente.');
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
+  useFocusEffect(useCallback(() => { carregarCampanhas(); }, [carregarCampanhas]));
 
-  /*  async function carregarCampanhas() {
-  try {
-    // Mock: Dados falsos simulando a resposta que viria do banco de dados
-    const dadosFalsos = [
-      {
-        id: "1",
-        nome: "Campanha do Agasalho",
-        descricao: "Arrecadação de cobertores para o inverno.",
-        // Trocamos o link da imagem
-        foto: "https://picsum.photos/seed/campanha1/400/200", 
-        ong: { nome: "ONG Esperança" }
-      },
-      {
-        id: "2",
-        nome: "Cestas Básicas",
-        descricao: "Ajude famílias em situação de vulnerabilidade.",
-        // Trocamos o link da imagem
-        foto: "https://picsum.photos/seed/campanha2/400/200",
-        ong: { nome: "Ação Solidária" }
-      }
-    ];
-
-    // Colocamos os dados falsos na tela ao invés de usar o response.data
-    setCampanhas(dadosFalsos as any);
-  } catch (error) {
-    console.log("Erro:", error);
-  } finally {
-    setLoading(false);
-  }
-}*/
-
-  const campanhasFiltradas = campanhas.filter(
-    (campanha) =>
-      campanha.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-      campanha.descricao?.toLowerCase().includes(busca.toLowerCase())
-  );
+  const termo = busca.trim().toLocaleLowerCase('pt-BR');
+  const campanhasFiltradas = campanhas.filter((campanha) =>
+    campanha.nome?.toLocaleLowerCase('pt-BR').includes(termo)
+    || campanha.descricao?.toLocaleLowerCase('pt-BR').includes(termo));
 
   return (
-    <SafeAreaView style={homeStyles.container}>
-      <Header onLogout={handleLogout} />
-
-      <View style={{ paddingTop: insets.top + 5 }}>
-        
-        {/* Textos de saudação removidos e substituídos pela Logo */}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <Header onLogout={logout} />
+      <View style={{ paddingTop: 64 }}>
         <View style={{ marginBottom: 20, marginTop: 10 }}>
-          <Image 
-            source={require('../../assets/logo.png')} 
-            style={{ width: 120, height: 40, resizeMode: 'contain' }} 
-          />
+          <Image source={require('../../assets/logo.png')} style={{ width: 120, height: 40, resizeMode: 'contain' }} />
         </View>
-
         <TextInput
-          style={homeStyles.search}
+          style={styles.search}
           placeholder="Buscar ONGs ou campanhas..."
+          placeholderTextColor={colors.placeholder}
           value={busca}
           onChangeText={setBusca}
+          accessibilityLabel="Buscar campanhas"
         />
-
-        <View style={homeStyles.sectionRow}>
-          <Text style={homeStyles.sectionTitle}>
-            {"Campanhas em destaque"}
-          </Text>
-
-          {isOng && (
-            <TouchableOpacity
-              onPress={() => navigation.navigate("CriarCampanha")}
-              style={homeStyles.createButton}
-              activeOpacity={0.8}
-            >
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>Campanhas em destaque</Text>
+          {role === 'ong' && (
+            <TouchableOpacity onPress={() => navigation.navigate('CriarCampanha')} style={styles.createButton} activeOpacity={0.8} accessibilityRole="button">
               <Icon name="plus" size={14} color="#FFFFFF" />
-              <Text style={homeStyles.createButtonText}>Criar</Text>
+              <Text style={styles.createButtonText}>Criar</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#16A34A" />
+        <View style={styles.stateContainer}><ActivityIndicator size="large" color={colors.greenDark} /></View>
+      ) : error ? (
+        <View style={styles.stateContainer}>
+          <Text style={styles.stateText}>{error}</Text>
+          <PrimaryButton label="Tentar novamente" onPress={carregarCampanhas} />
+        </View>
       ) : (
         <FlatList
           data={campanhasFiltradas}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <CampaignCard campanha={item} />}
-          contentContainerStyle={{ paddingBottom: 80 }}
+          contentContainerStyle={{ paddingBottom: 110, flexGrow: campanhasFiltradas.length ? 0 : 1 }}
+          ListEmptyComponent={<View style={styles.stateContainer}><Text style={styles.stateText}>Nenhuma campanha encontrada.</Text></View>}
         />
       )}
-
-      <BottomMenu navigation={navigation} activeRoute="Home" />
+      <BottomMenu activeRoute="Home" />
     </SafeAreaView>
   );
 }

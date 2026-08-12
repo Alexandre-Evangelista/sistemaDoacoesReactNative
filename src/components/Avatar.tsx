@@ -1,56 +1,31 @@
 import React from 'react';
-import { View, Image, StyleProp, ViewStyle, ImageStyle } from 'react-native';
+import { Image, ImageStyle, StyleProp, View, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { API_URL } from '../config/variaveis';
+import { useTheme } from '../contexts/ThemeContext';
+import { resolveMediaUrl } from '../utils/media';
 
 type AvatarProps = {
   foto?: string | null;
   tipo?: 'ong' | 'usuario';
   size?: number;
-  style?: StyleProp<ViewStyle | ImageStyle>;
+  style?: StyleProp<ImageStyle>;
 };
 
-function resolverUri(foto: string, tipo: 'ong' | 'usuario') {
-  if (foto.startsWith('file://') || foto.startsWith('http://') || foto.startsWith('https://')) {
-    return foto;
-  }
+export default function Avatar({ foto, size = 90, style }: AvatarProps) {
+  const { colors } = useTheme();
+  const uri = resolveMediaUrl(foto);
+  const baseStyle: ImageStyle & ViewStyle = {
+    width: size,
+    height: size,
+    borderRadius: size * 0.28,
+    backgroundColor: colors.inputBackground,
+  };
 
-  // Backend hoje salva foto de usuário e de ONG na mesma pasta "ong"
-  const url = `${API_URL}/uploads/ong/${encodeURIComponent(foto)}`;
-  console.log('AVATAR URI:', url);
-  return url;
-}
-
-export default function Avatar({ foto, tipo = 'usuario', size = 90, style }: AvatarProps) {
-  if (foto) {
-    return (
-      <Image
-        source={{ uri: resolverUri(foto, tipo) }}
-        style={[
-          { width: size, height: size, borderRadius: size * 0.28 },
-          style as StyleProp<ImageStyle>,
-        ]}
-        onError={(e) => console.log('AVATAR ERRO:', tipo, e.nativeEvent.error)}
-        onLoad={() => console.log('AVATAR CARREGOU OK:', tipo)}
-      />
-    );
-  }
+  if (uri) return <Image source={{ uri }} style={[baseStyle, style]} accessibilityLabel="Foto de perfil" />;
 
   return (
-    <View
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size * 0.28,
-          backgroundColor: '#EAEAEE',
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        style as StyleProp<ViewStyle>,
-      ]}
-    >
-      <Icon name="user" size={size * 0.55} color="#1A1A1A" />
+    <View style={[baseStyle, { justifyContent: 'center', alignItems: 'center' }, style]} accessibilityLabel="Perfil sem foto">
+      <Icon name="user" size={size * 0.55} color={colors.textPrimary} />
     </View>
   );
 }

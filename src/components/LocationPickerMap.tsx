@@ -1,166 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { MapPressEvent, Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Icon from 'react-native-vector-icons/Feather';
+import { useTheme } from '../contexts/ThemeContext';
+import type { ThemeColors } from '../styles/theme';
 
-type Coordenada = {
-  latitude: number;
-  longitude: number;
-};
+export type Coordenada = { latitude: number; longitude: number };
+type Props = { value: Coordenada | null; onChange: (coords: Coordenada) => void; height?: number };
 
-type LocationPickerMapProps = {
-  value: Coordenada | null;
-  onChange: (coords: Coordenada) => void;
-  height?: number;
-};
+const FALLBACK_COORDS = { latitude: -6.1737, longitude: -36.6478 };
 
-export default function LocationPickerMap({
-  value,
-  onChange,
-  height = 220,
-}: LocationPickerMapProps) {
-  const [regiaoInicial, setRegiaoInicial] = useState<Region | null>(null);
-  const [carregandoLocal, setCarregandoLocal] = useState(true);
-  const [buscandoLocal, setBuscandoLocal] = useState(false);
+function toRegion(coords: Coordenada): Region {
+  return { ...coords, latitudeDelta: 0.03, longitudeDelta: 0.03 };
+}
+
+export default function LocationPickerMap({ value, onChange, height = 220 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const mapRef = useRef<MapView>(null);
+  const [region, setRegion] = useState<Region | null>(value ? toRegion(value) : null);
+  const [loading, setLoading] = useState(!value);
+  const [locating, setLocating] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    obterLocalizacaoInicial();
-  }, []);
+    if (value) return;
 
-  async function obterLocalizacaoInicial() {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setRegiaoInicial({
-          latitude: -6.1737,
-          longitude: -36.6478,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        });
-        return;
-      }
+    async function loadInitialLocation() {
+      try {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status !== 'granted') {
+          setRegion(toRegion(FALLBACK_COORDS));
+          setMessage('Selecione manualmente um ponto no mapa.');
+          return;
+        }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const coords = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
-
-      setRegiaoInicial({
-        ...coords,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      });
-
-      // já marca automaticamente a localização atual como valor inicial
-      if (!value) {
+        const cached = await Location.getLastKnownPositionAsync({ maxAge: 60_000 });
+        const location = cached ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const coords = { latitude: location.coords.latitude, longitude: location.coords.longitude };
+        setRegion(toRegion(coords));
         onChange(coords);
+      } catch {
+        setRegion(toRegion(FALLBACK_COORDS));
+        setMessage('Não foi possível obter sua localização. Selecione um ponto no mapa.');
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setCarregandoLocal(false);
     }
-  }
+
+    loadInitialLocation();
+  }, [onChange, value]);
 
   function handleMapPress(event: MapPressEvent) {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    onChange({ latitude, longitude });
+    onChange(event.nativeEvent.coordinate);
+    setMessage(null);
   }
 
-  async function usarLocalizacaoAtual() {
-    setBuscandoLocal(true);
+  async function useCurrentLocation() {
+    setLocating(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permissão negada', 'Habilite a localização nas configurações do dispositivo ou marque o mapa manualmente.');
         return;
       }
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      onChange({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const coords = { latitude: location.coords.latitude, longitude: location.coords.longitude };
+      onChange(coords);
+      mapRef.current?.animateToRegion(toRegion(coords), 350);
+      setMessage(null);
+    } catch {
+      Alert.alert('Localização indisponível', 'Não foi possível obter sua localização agora.');
     } finally {
-      setBuscandoLocal(false);
+      setLocating(false);
     }
   }
 
-  if (carregandoLocal || !regiaoInicial) {
+  if (loading || !region) {
     return (
       <View style={[styles.container, styles.loadingBox, { height }]}>
-        <ActivityIndicator size="small" color="#16A34A" />
-        <Text style={styles.loadingTexto}>Obtendo sua localização...</Text>
+        <ActivityIndicator size="small" color={colors.greenDark} />
+        <Text style={styles.secondaryText}>Obtendo sua localização...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={[styles.map, { height }]}
-        initialRegion={regiaoInicial}
-        onPress={handleMapPress}
-      >
+      <MapView ref={mapRef} style={[styles.map, { height }]} initialRegion={region} onPress={handleMapPress}>
         {value && <Marker coordinate={value} />}
       </MapView>
-
       <TouchableOpacity
-        style={styles.botaoLocalAtual}
-        onPress={usarLocalizacaoAtual}
+        style={styles.currentLocationButton}
+        onPress={useCurrentLocation}
         activeOpacity={0.8}
-        disabled={buscandoLocal}
+        disabled={locating}
+        accessibilityRole="button"
       >
-        <Icon name="crosshair" size={16} color="#16A34A" />
-        <Text style={styles.botaoLocalAtualTexto}>
-          {buscandoLocal ? 'Localizando...' : 'Usar minha localização atual'}
-        </Text>
+        <Icon name="crosshair" size={16} color={colors.greenDark} />
+        <Text style={styles.currentLocationText}>{locating ? 'Localizando...' : 'Usar minha localização atual'}</Text>
       </TouchableOpacity>
-
-      <Text style={styles.dica}>Toque no mapa para marcar outro local</Text>
+      <Text style={styles.secondaryText}>{message ?? 'Toque no mapa para marcar outro local'}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 8,
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { borderRadius: 12, overflow: 'hidden', marginBottom: 8, backgroundColor: colors.surface },
+  map: { width: '100%' },
+  loadingBox: { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.inputBackground, gap: 8 },
+  currentLocationButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, backgroundColor: colors.successSurface,
   },
-  map: {
-    width: '100%',
-  },
-  loadingBox: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    gap: 8,
-  },
-  loadingTexto: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  botaoLocalAtual: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    backgroundColor: '#F0FDF4',
-  },
-  botaoLocalAtualTexto: {
-    color: '#16A34A',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  dica: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginTop: 4,
-  },
+  currentLocationText: { color: colors.greenDark, fontWeight: '600', fontSize: 13 },
+  secondaryText: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', paddingVertical: 6 },
 });

@@ -1,80 +1,43 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-
-import { criarCampanhaStyles as styles } from '../styles/criarCampanhaStyles';
-import { colors } from '../styles/loginStyles';
+import Icon from 'react-native-vector-icons/Feather';
 import InputField from '../components/InputField';
+import LocationPickerMap, { Coordenada } from '../components/LocationPickerMap';
 import PrimaryButton from '../components/PrimaryButton';
-import campanhaService from '../services/campanhaService';
 import { useAuth } from '../contexts/AuthContext';
-import LocationPickerMap from '../components/LocationPickerMap';
+import { useTheme } from '../contexts/ThemeContext';
+import type { ScreenProps } from '../routes/types';
+import campanhaService from '../services/campanhaService';
+import { createCriarCampanhaStyles } from '../styles/criarCampanhaStyles';
 
-export default function CriarCampanhaScreen({ navigation }: any) {
+export default function CriarCampanhaScreen({ navigation }: ScreenProps<'CriarCampanha'>) {
   const { conta, role } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createCriarCampanhaStyles(colors), [colors]);
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [foto, setFoto] = useState<{ uri: string; name: string; type: string } | null>(null);
-  const [localizacao, setLocalizacao] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [asset, setAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [localizacao, setLocalizacao] = useState<Coordenada | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function escolherFoto() {
-    const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissao.granted) {
-      Alert.alert('Permissão negada', 'Precisamos acessar suas fotos.');
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permissão negada', 'Precisamos acessar suas fotos para escolher a imagem da campanha.');
       return;
     }
-
-    const resultado = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-      aspect: [16, 9],
-      allowsEditing: true,
-    });
-
-    if (!resultado.canceled) {
-      const asset = resultado.assets[0];
-      const nomeArquivo = asset.uri.split('/').pop() ?? 'foto.jpg';
-      const extensao = nomeArquivo.split('.').pop();
-
-      setFoto({
-        uri: asset.uri,
-        name: nomeArquivo,
-        type: `image/${extensao === 'jpg' ? 'jpeg' : extensao}`,
-      });
-    }
-  }
-
-  async function usarLocalizacaoAtual() {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permissão negada', 'Não foi possível obter sua localização.');
-      return;
-    }
-    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    setLocalizacao({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, aspect: [16, 9], allowsEditing: true });
+    if (!result.canceled) setAsset(result.assets[0]);
   }
 
   async function handleCriar() {
-    if (!nome || !descricao) {
+    if (!nome.trim() || !descricao.trim()) {
       Alert.alert('Atenção', 'Preencha o nome e a descrição da campanha.');
       return;
     }
-    if (!foto) {
+    if (!asset) {
       Alert.alert('Atenção', 'A foto da campanha é obrigatória.');
       return;
     }
@@ -83,78 +46,40 @@ export default function CriarCampanhaScreen({ navigation }: any) {
       return;
     }
 
+    const name = asset.fileName || asset.uri.split('/').pop() || `campanha_${Date.now()}.jpg`;
+    const extension = name.split('.').pop()?.toLowerCase();
+    const type = asset.mimeType || (extension ? `image/${extension === 'jpg' ? 'jpeg' : extension}` : 'image/jpeg');
     setLoading(true);
     try {
       await campanhaService.criarCampanha({
-        nome,
-        descricao,
-        foto,
-        latitude: localizacao?.latitude,
-        longitude: localizacao?.longitude,
-        cnpjOng: conta.cnpj,
+        nome: nome.trim(), descricao: descricao.trim(), foto: { uri: asset.uri, name, type },
+        latitude: localizacao?.latitude, longitude: localizacao?.longitude, cnpjOng: conta.cnpj,
       });
-
       Alert.alert('Sucesso', 'Campanha criada com sucesso!');
       navigation.goBack();
-    } catch (error: any) {
-      console.log('ERRO CRIAR CAMPANHA:', error.response?.data);
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível criar a campanha.');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      Alert.alert('Erro', message || 'Não foi possível criar a campanha.');
+    } finally { setLoading(false); }
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.backButton} onPress={navigation.goBack} accessibilityRole="button" accessibilityLabel="Voltar"><Icon name="arrow-left" size={22} color={colors.textPrimary} /></TouchableOpacity>
           <Text style={styles.title}>Nova campanha</Text>
         </View>
-
-        <TouchableOpacity style={styles.fotoPicker} onPress={escolherFoto} activeOpacity={0.8}>
-          {foto ? (
-            <Image source={{ uri: foto.uri }} style={styles.fotoPreview} resizeMode="cover" />
-          ) : (
-            <>
-              <Icon name="image" size={28} color={colors.placeholder} />
-              <Text style={styles.fotoPlaceholderText}>Adicionar foto da campanha</Text>
-            </>
-          )}
+        <TouchableOpacity style={styles.fotoPicker} onPress={escolherFoto} activeOpacity={0.8} accessibilityRole="button">
+          {asset ? <Image source={{ uri: asset.uri }} style={styles.fotoPreview} resizeMode="cover" /> : <><Icon name="image" size={28} color={colors.placeholder} /><Text style={styles.fotoPlaceholderText}>Adicionar foto da campanha</Text></>}
         </TouchableOpacity>
-
         <Text style={styles.label}>Nome da campanha</Text>
-        <InputField
-          icon="edit-3"
-          placeholder="Ex: Campanha de Alimentos"
-          value={nome}
-          onChangeText={setNome}
-          editable={!loading}
-        />
-
+        <InputField icon="edit-3" placeholder="Ex: Campanha de Alimentos" value={nome} onChangeText={setNome} editable={!loading} />
         <Text style={styles.label}>Descrição</Text>
-        <InputField
-          icon="file-text"
-          placeholder="Conte sobre a campanha..."
-          value={descricao}
-          onChangeText={setDescricao}
-          editable={!loading}
-          multiline
-        />
-
+        <InputField icon="file-text" placeholder="Conte sobre a campanha..." value={descricao} onChangeText={setDescricao} editable={!loading} multiline style={{ minHeight: 96, textAlignVertical: 'top' }} />
         <Text style={styles.label}>Localização</Text>
-        <LocationPickerMap
-          value={localizacao}
-          onChange={setLocalizacao}
-        />
-
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.greenDark} />
-        ) : (
-          <PrimaryButton label="Criar campanha" onPress={handleCriar} />
-        )}
+        <LocationPickerMap value={localizacao} onChange={setLocalizacao} />
+        <PrimaryButton label="Criar campanha" onPress={handleCriar} loading={loading} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,6 +1,5 @@
-// Usuario.ts
 export interface Usuario {
-  id: string;
+  id?: string;
   email: string;
   nome: string;
 

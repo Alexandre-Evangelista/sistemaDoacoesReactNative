@@ -1,19 +1,22 @@
-import React from 'react';
-import { TextInput, View, TextInputProps } from 'react-native';
+import React, { useMemo } from 'react';
+import { TextInput, TextInputProps, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { loginStyles, colors } from '../styles/loginStyles';
+import { useTheme } from '../contexts/ThemeContext';
+import { createLoginStyles } from '../styles/loginStyles';
 
-type Props = TextInputProps & {
-  icon: string;
-};
+type Props = TextInputProps & { icon: string };
 
-export default function InputField({ icon, ...rest }: Props) {
+export default function InputField({ icon, style, placeholder, accessibilityLabel, ...rest }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createLoginStyles(colors), [colors]);
   return (
-    <View style={loginStyles.inputWrapper}>
-      <Icon name={icon} size={20} color={colors.placeholder} style={loginStyles.inputIcon} />
+    <View style={styles.inputWrapper}>
+      <Icon name={icon} size={20} color={colors.placeholder} style={styles.inputIcon} />
       <TextInput
+        placeholder={placeholder}
         placeholderTextColor={colors.placeholder}
-        style={loginStyles.input}
+        style={[styles.input, style]}
+        accessibilityLabel={accessibilityLabel ?? placeholder}
         {...rest}
       />
     </View>

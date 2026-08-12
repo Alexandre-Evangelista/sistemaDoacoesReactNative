@@ -10,6 +10,7 @@ export interface Doacao {
   email?: string | null;
   cnpj?: string | null;
   IDcampanha?: string | null;
+  status?: string | null;
   latitude?: number | null; 
   longitude?: number | null; 
   usuario?: Usuario;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,26 +19,29 @@ import LocationPickerMap from '../components/LocationPickerMap';
 import campanhaService from '../services/campanhaService';
 import doacaoService, { Doacao } from '../services/doacaoService';
 import { useAuth } from '../contexts/AuthContext';
-import { doacoesStyles } from '../styles/doacoesStyles';
-import { colors } from '../styles/loginStyles';
-import { API_URL } from "../config/variaveis";
+import { useTheme } from '../contexts/ThemeContext';
+import type { ScreenProps } from '../routes/types';
+import { createDoacoesStyles } from '../styles/doacoesStyles';
+import type { ThemeColors } from '../styles/theme';
+import { resolveMediaUrl } from '../utils/media';
 
 
-export default function CampanhaDetalhesScreen({ route, navigation }: any) {
+export default function CampanhaDetalhesScreen({ route, navigation }: ScreenProps<'CampanhaDetalhes'>) {
   const { campanha: campanhaInicial } = route.params;
   const { conta, role } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const donationStyles = useMemo(() => createDoacoesStyles(colors), [colors]);
 
   const [campanha, setCampanha] = useState(campanhaInicial);
   const [editando, setEditando] = useState(false);
   const [descricao, setDescricao] = useState(campanha.descricao);
   const [localizacao, setLocalizacao] = useState(
-    campanha.latitude && campanha.longitude
+    campanha.latitude != null && campanha.longitude != null
       ? { latitude: campanha.latitude, longitude: campanha.longitude }
       : null
   );
-  const fotoUri = campanha.foto?.startsWith('http')
-    ? campanha.foto
-    : `${API_URL}/uploads/ong/${encodeURIComponent(campanha.foto)}`;
+  const fotoUri = resolveMediaUrl(campanha.foto);
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
@@ -54,6 +57,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   const [novaQuantidade, setNovaQuantidade] = useState('1');
   const [novoTipo, setNovoTipo] = useState('');
   const [enviandoDoacao, setEnviandoDoacao] = useState(false);
+  const [erroDoacoes, setErroDoacoes] = useState<string | null>(null);
 
   const cnpjDaCampanha = campanha.cnpjOng ?? campanha.ong?.cnpj;
   const ehDonoDaCampanha = role === 'ong' && conta && 'cnpj' in conta && conta.cnpj === cnpjDaCampanha;
@@ -70,11 +74,12 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   async function carregarDoacoes() {
     setCarregandoDoacoes(true);
     try {
+      setErroDoacoes(null);
       const todas = await doacaoService.listarDoacoes();
       const daCampanha = (todas || []).filter((d) => d.IDcampanha === campanha.id);
       setDoacoes(daCampanha);
-    } catch (error: any) {
-      console.log('ERRO LISTAR DOACOES:', error.response?.data);
+    } catch {
+      setErroDoacoes('Não foi possível carregar suas doações nesta campanha.');
     } finally {
       setCarregandoDoacoes(false);
     }
@@ -88,11 +93,11 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
 
   async function handleConfirmarDoacao() {
     const quantidadeNum = Number(novaQuantidade);
-    if (!novoTipo || !quantidadeNum || quantidadeNum <= 0) {
+    if (!novoTipo.trim() || !Number.isFinite(quantidadeNum) || quantidadeNum <= 0) {
       Alert.alert('Atenção', 'Preencha o tipo e uma quantidade válida.');
       return;
     }
-    if (!conta || !('email' in conta)) {
+    if (!conta || role !== 'usuario' || !conta.email) {
       Alert.alert('Erro', 'Não foi possível identificar o usuário logado.');
       return;
     }
@@ -102,7 +107,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
       await doacaoService.criarDoacao({
         datadoacao: new Date().toISOString(),
         quantidade: quantidadeNum,
-        tipo: novoTipo,
+        tipo: novoTipo.trim(),
         email: conta.email,
         cnpj: cnpjDaCampanha ?? null,
         IDcampanha: campanha.id,
@@ -113,9 +118,9 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
       setNovoTipo('');
       await carregarDoacoes();
       Alert.alert('Obrigado!', `Sua doação para a ${campanha.ong?.nome || 'ONG'} foi registrada. Agradecemos o apoio!`);
-    } catch (error: any) {
-      console.log('ERRO CRIAR DOACAO:', error.response?.data);
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível registrar a doação.');
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      Alert.alert('Erro', message || 'Não foi possível registrar a doação.');
     } finally {
       setEnviandoDoacao(false);
     }
@@ -135,7 +140,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
 
   async function salvarEdicaoDoacao(doacao: Doacao) {
     const quantidadeNum = Number(quantidadeEdit);
-    if (!tipoEdit || !quantidadeNum || quantidadeNum <= 0) {
+    if (!tipoEdit.trim() || !Number.isFinite(quantidadeNum) || quantidadeNum <= 0) {
       Alert.alert('Atenção', 'Preencha o tipo e uma quantidade válida.');
       return;
     }
@@ -144,16 +149,16 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
       await doacaoService.atualizarDoacao(doacao.id, {
         datadoacao: doacao.datadoacao,
         quantidade: quantidadeNum,
-        tipo: tipoEdit,
+        tipo: tipoEdit.trim(),
         cnpj: doacao.cnpj,
         IDcampanha: doacao.IDcampanha,
       });
 
       cancelarEdicaoDoacao();
       await carregarDoacoes();
-    } catch (error: any) {
-      console.log('ERRO ATUALIZAR DOACAO:', error.response?.data);
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível atualizar a doação.');
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      Alert.alert('Erro', message || 'Não foi possível atualizar a doação.');
     }
   }
 
@@ -170,9 +175,9 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
             try {
               await doacaoService.deletarDoacao(doacao.id);
               await carregarDoacoes();
-            } catch (error: any) {
-              console.log('ERRO EXCLUIR DOACAO:', error.response?.data);
-              Alert.alert('Erro', error.response?.data?.message || 'Não foi possível excluir a doação.');
+            } catch (error: unknown) {
+              const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+              Alert.alert('Erro', message || 'Não foi possível excluir a doação.');
             }
           },
         },
@@ -181,15 +186,16 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   }
 
   async function handleSalvarEdicaoCampanha() {
-    if (!descricao) {
+    if (!descricao.trim()) {
       Alert.alert('Atenção', 'A descrição não pode ficar vazia.');
       return;
     }
 
     setSalvando(true);
     try {
+      if (!cnpjDaCampanha) throw new Error('Não foi possível identificar a ONG responsável.');
       const atualizada = await campanhaService.atualizarCampanha(campanha.id, {
-        descricao,
+        descricao: descricao.trim(),
         latitude: localizacao?.latitude,
         longitude: localizacao?.longitude,
         cnpjOng: cnpjDaCampanha,
@@ -198,9 +204,9 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
       setCampanha({ ...campanha, ...atualizada });
       setEditando(false);
       Alert.alert('Sucesso', 'Campanha atualizada!');
-    } catch (error: any) {
-      console.log('ERRO ATUALIZAR CAMPANHA:', error.response?.data);
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível atualizar a campanha.');
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      Alert.alert('Erro', message || (error instanceof Error ? error.message : 'Não foi possível atualizar a campanha.'));
     } finally {
       setSalvando(false);
     }
@@ -220,9 +226,9 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
             try {
               await campanhaService.deletarCampanha(campanha.id);
               navigation.goBack();
-            } catch (error: any) {
-              console.log('ERRO EXCLUIR CAMPANHA:', error.response?.data);
-              Alert.alert('Erro', error.response?.data?.message || 'Não foi possível excluir a campanha.');
+            } catch (error: unknown) {
+              const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+              Alert.alert('Erro', message || 'Não foi possível excluir a campanha.');
             } finally {
               setExcluindo(false);
             }
@@ -235,12 +241,13 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <Image
-          source={{ uri: fotoUri }}
-          style={styles.image}
-          onError={(e) => console.log("ERRO IMAGEM:", e.nativeEvent.error)}
-          onLoad={() => console.log("IMAGEM OK:", campanha.foto)}
-        />
+        {fotoUri ? (
+          <Image source={{ uri: fotoUri }} style={styles.image} />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Icon name="image" size={44} color={colors.placeholder} />
+          </View>
+        )}
 
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#FFF" />
@@ -292,7 +299,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
                   onPress={() => {
                     setDescricao(campanha.descricao);
                     setLocalizacao(
-                      campanha.latitude && campanha.longitude
+                      campanha.latitude != null && campanha.longitude != null
                         ? { latitude: campanha.latitude, longitude: campanha.longitude }
                         : null
                     );
@@ -304,7 +311,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
                 </TouchableOpacity>
 
                 {salvando ? (
-                  <ActivityIndicator size="small" color="#16A34A" style={{ flex: 1 }} />
+                  <ActivityIndicator size="small" color={colors.greenDark} style={{ flex: 1 }} />
                 ) : (
                   <View style={{ flex: 1 }}>
                     <PrimaryButton label="Salvar alterações" onPress={handleSalvarEdicaoCampanha} />
@@ -324,23 +331,34 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
                 {carregandoDoacoes && <ActivityIndicator size="small" color={colors.greenDark} />}
               </View>
 
-              {doacoes.length === 0 && !carregandoDoacoes && (
+              {erroDoacoes && !carregandoDoacoes && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{erroDoacoes}</Text>
+                  <TouchableOpacity onPress={carregarDoacoes} accessibilityRole="button">
+                    <Text style={styles.retryText}>Tentar novamente</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {doacoes.length === 0 && !carregandoDoacoes && !erroDoacoes && (
                 <Text style={styles.emptyText}>Você ainda não doou para esta campanha.</Text>
               )}
 
               {doacoes.map((doacao) => (
-                <View key={doacao.id} style={doacoesStyles.card}>
+                <View key={doacao.id} style={donationStyles.card}>
                   {doacaoEditandoId === doacao.id ? (
                     <View>
                       <TextInput
                         style={styles.smallInput}
                         placeholder="Tipo (ex: Cestas Básicas)"
+                        placeholderTextColor={colors.placeholder}
                         value={tipoEdit}
                         onChangeText={setTipoEdit}
                       />
                       <TextInput
                         style={styles.smallInput}
                         placeholder="Quantidade"
+                        placeholderTextColor={colors.placeholder}
                         value={quantidadeEdit}
                         onChangeText={setQuantidadeEdit}
                         keyboardType="numeric"
@@ -359,18 +377,18 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
                     </View>
                   ) : (
                     <>
-                      <View style={doacoesStyles.cardHeader}>
-                        <Text style={doacoesStyles.ongName}>{campanha.ong?.nome || 'ONG Parceira'}</Text>
-                        <Text style={doacoesStyles.dateText}>
+                      <View style={donationStyles.cardHeader}>
+                        <Text style={donationStyles.ongName}>{campanha.ong?.nome || 'ONG Parceira'}</Text>
+                        <Text style={donationStyles.dateText}>
                           {new Date(doacao.datadoacao).toLocaleDateString('pt-BR')}
                         </Text>
                       </View>
-                      <View style={doacoesStyles.cardBody}>
-                        <View style={doacoesStyles.iconBox}>
+                      <View style={donationStyles.cardBody}>
+                        <View style={donationStyles.iconBox}>
                           <Icon name="package" size={20} color={colors.greenDark} />
                         </View>
-                        <View style={doacoesStyles.donationDetails}>
-                          <Text style={doacoesStyles.quantityText}>
+                        <View style={donationStyles.donationDetails}>
+                          <Text style={donationStyles.quantityText}>
                             {doacao.quantidade}x {doacao.tipo}
                           </Text>
                         </View>
@@ -379,7 +397,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
                             <Icon name="edit-2" size={18} color={colors.textSecondary} />
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => handleExcluirDoacao(doacao)}>
-                            <Icon name="trash-2" size={18} color="#DC2626" />
+                            <Icon name="trash-2" size={18} color={colors.danger} />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -399,7 +417,12 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
       )}
 
       {/* Modal de nova doação - estilo igual ao anterior */}
-      <Modal visible={modalVisivel} transparent animationType="slide">
+      <Modal
+        visible={modalVisivel}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisivel(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Detalhes da Doação</Text>
@@ -408,6 +431,7 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Ex: Cesta Básica, Agasalhos..."
+              placeholderTextColor={colors.placeholder}
               value={novoTipo}
               onChangeText={setNovoTipo}
             />
@@ -416,13 +440,14 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Ex: 2"
+              placeholderTextColor={colors.placeholder}
               keyboardType="numeric"
               value={novaQuantidade}
               onChangeText={setNovaQuantidade}
             />
 
             {enviandoDoacao ? (
-              <ActivityIndicator size="large" color="#16A34A" style={{ marginTop: 24 }} />
+              <ActivityIndicator size="large" color={colors.greenDark} style={{ marginTop: 24 }} />
             ) : (
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisivel(false)}>
@@ -440,9 +465,12 @@ export default function CampanhaDetalhesScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF' },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   image: { width: '100%', height: 280, resizeMode: 'cover' },
+  imagePlaceholder: {
+    backgroundColor: colors.imagePlaceholder, alignItems: 'center', justifyContent: 'center',
+  },
   backButton: {
     position: 'absolute', top: 20, left: 20,
     backgroundColor: 'rgba(0,0,0,0.4)', padding: 10, borderRadius: 20,
@@ -454,47 +482,52 @@ const styles = StyleSheet.create({
   ownerButton: {
     backgroundColor: 'rgba(0,0,0,0.4)', padding: 10, borderRadius: 20,
   },
-  content: { padding: 24, marginTop: -20, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  ongName: { fontSize: 14, color: '#16A34A', fontWeight: 'bold', marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: '800', color: '#1F2937' },
-  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', marginBottom: 12 },
-  description: { fontSize: 15, color: '#4B5563', lineHeight: 24 },
+  content: { padding: 24, marginTop: -20, backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  ongName: { fontSize: 14, color: colors.greenDark, fontWeight: 'bold', marginBottom: 8 },
+  title: { fontSize: 26, fontWeight: '800', color: colors.textPrimary },
+  divider: { height: 1, backgroundColor: colors.divider, marginVertical: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
+  description: { fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
   editInput: {
-    fontSize: 15, color: '#4B5563', lineHeight: 24,
-    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
+    fontSize: 15, color: colors.textPrimary, lineHeight: 24,
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12,
     padding: 12, minHeight: 100, textAlignVertical: 'top',
   },
   editActions: { flexDirection: 'row', gap: 12, marginTop: 16, alignItems: 'center' },
   cancelButton: {
     paddingVertical: 14, paddingHorizontal: 16,
-    borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
+    borderRadius: 12, borderWidth: 1, borderColor: colors.inputBorder,
   },
-  cancelButtonText: { color: '#4B5563', fontWeight: '600' },
-  footer: { padding: 20, backgroundColor: '#FFF', borderTopWidth: 1, borderColor: '#F3F4F6' },
+  cancelButtonText: { color: colors.textSecondary, fontWeight: '600' },
+  footer: { padding: 20, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.divider },
   donationsSectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  emptyText: { fontSize: 14, color: '#9CA3AF', marginBottom: 12 },
+  emptyText: { fontSize: 14, color: colors.placeholder, marginBottom: 12 },
+  errorBox: { backgroundColor: colors.dangerSurface, borderRadius: 12, padding: 12, marginBottom: 12 },
+  errorText: { color: colors.danger, fontSize: 14, marginBottom: 8 },
+  retryText: { color: colors.link, fontSize: 14, fontWeight: '700' },
   donationActions: { flexDirection: 'row', gap: 14, marginLeft: 8 },
   smallInput: {
-    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10,
-    padding: 10, marginBottom: 10, fontSize: 14,
+    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 10,
+    padding: 10, marginBottom: 10, fontSize: 14, color: colors.textPrimary,
+    backgroundColor: colors.inputBackground,
   },
   saveSmallButton: {
-    flex: 1, backgroundColor: '#16A34A', borderRadius: 12,
+    flex: 1, backgroundColor: colors.greenDark, borderRadius: 12,
     paddingVertical: 14, alignItems: 'center',
   },
   saveSmallButtonText: { color: '#FFF', fontWeight: '700' },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginBottom: 16, textAlign: 'center' },
-  label: { fontSize: 14, fontWeight: '600', color: '#4B5563', marginBottom: 8, marginTop: 12 },
-  input: { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 14, fontSize: 16, color: '#1F2937', borderWidth: 1, borderColor: '#E5E7EB' },
+  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 16, textAlign: 'center' },
+  label: { fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 8, marginTop: 12 },
+  input: { backgroundColor: colors.inputBackground, borderRadius: 12, padding: 14, fontSize: 16, color: colors.textPrimary, borderWidth: 1, borderColor: colors.inputBorder },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 },
-  modalCancelButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, marginRight: 8 },
-  modalCancelButtonText: { color: '#4B5563', fontWeight: 'bold', fontSize: 16 },
-  modalConfirmButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#16A34A', borderRadius: 12, marginLeft: 8 },
+  modalCancelButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: colors.inputBackground, borderRadius: 12, marginRight: 8 },
+  modalCancelButtonText: { color: colors.textSecondary, fontWeight: 'bold', fontSize: 16 },
+  modalConfirmButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: colors.greenDark, borderRadius: 12, marginLeft: 8 },
   modalConfirmButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 });

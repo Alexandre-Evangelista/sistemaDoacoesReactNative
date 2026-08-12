@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
-import { colors } from '../styles/loginStyles';
 import InputField from '../components/InputField';
 import PrimaryButton from '../components/PrimaryButton';
-
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import type { ScreenProps } from '../routes/types';
 import authService, { Usuario } from '../services/authServices';
+import { createEditarPerfilStyles } from '../styles/editarPerfilStyles';
 
-import { editarPerfilStyles as styles } from '../styles/editarPerfilStyles';
-
-export default function EditarPerfilScreen({ navigation }: any) {
+export default function EditarPerfilScreen({ navigation }: ScreenProps<'EditarPerfil'>) {
   const { conta, role, atualizarConta } = useAuth();
-  const isUsuario = role === 'usuario';
-
+  const { colors } = useTheme();
+  const styles = useMemo(() => createEditarPerfilStyles(colors), [colors]);
   const [nome, setNome] = useState(conta?.nome || '');
   const [salvando, setSalvando] = useState(false);
 
-  async function handleSalvar() {
-    if (!isUsuario || !conta) return;
+  useEffect(() => { setNome(conta?.nome || ''); }, [conta?.nome]);
 
+  async function handleSalvar() {
+    if (role !== 'usuario' || !conta) return;
     if (!nome.trim()) {
       Alert.alert('Atenção', 'O nome não pode ficar vazio.');
       return;
@@ -28,21 +28,16 @@ export default function EditarPerfilScreen({ navigation }: any) {
 
     setSalvando(true);
     try {
-      const usuarioAtual = conta as Usuario;
-      const payload = {
-        nome,
-        foto: usuarioAtual.foto ?? null,
-        tipo: usuarioAtual.tipo ?? null,
-        cpf: usuarioAtual.cpf ?? null,
-      };
-
-      await authService.atualizarUsuario(usuarioAtual.email, payload);
-      await atualizarConta(payload);
-
+      const usuario = conta as Usuario;
+      const response = await authService.atualizarUsuario(usuario.email, {
+        nome: nome.trim(), foto: usuario.foto ?? null, tipo: usuario.tipo ?? null, cpf: usuario.cpf ?? null,
+      });
+      await atualizarConta(response);
       Alert.alert('Sucesso', 'Seus dados foram atualizados!');
       navigation.goBack();
-    } catch (error: any) {
-      Alert.alert('Erro', error?.response?.data?.message ?? 'Não foi possível atualizar seus dados.');
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      Alert.alert('Erro', message ?? 'Não foi possível atualizar seus dados.');
     } finally {
       setSalvando(false);
     }
@@ -51,45 +46,17 @@ export default function EditarPerfilScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={navigation.goBack} accessibilityRole="button" accessibilityLabel="Voltar">
           <Icon name="arrow-left" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Editar Dados</Text>
       </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {!isUsuario ? (
-          <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-            <Icon name="clock" size={28} color={colors.textSecondary} />
-            <Text style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 12 }}>
-              A edição de dados para ONGs ainda não está disponível. Em breve!
-            </Text>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.label}>Nome Completo</Text>
-            <InputField
-              icon="user"
-              value={nome}
-              onChangeText={setNome}
-            />
-
-            <Text style={styles.label}>E-mail (Não editável)</Text>
-            <InputField
-              icon="mail"
-              value={(conta as Usuario)?.email || ''}
-              editable={false}
-            />
-
-            <View style={{ marginTop: 24 }}>
-              {salvando ? (
-                <ActivityIndicator size="large" color={colors.greenDark} />
-              ) : (
-                <PrimaryButton label="Salvar Alterações" onPress={handleSalvar} />
-              )}
-            </View>
-          </>
-        )}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <Text style={styles.label}>Nome Completo</Text>
+        <InputField icon="user" value={nome} onChangeText={setNome} editable={!salvando} />
+        <Text style={styles.label}>E-mail (Não editável)</Text>
+        <InputField icon="mail" value={(conta as Usuario)?.email || ''} editable={false} />
+        <View style={{ marginTop: 24 }}><PrimaryButton label="Salvar Alterações" onPress={handleSalvar} loading={salvando} /></View>
       </ScrollView>
     </SafeAreaView>
   );

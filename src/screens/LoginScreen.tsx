@@ -1,111 +1,68 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Image, // <-- Importação do Image adicionada aqui
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/AntDesign';
-import { loginStyles } from '../styles/loginStyles';
 import InputField from '../components/InputField';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
-import { Role } from '../services/authServices';
+import { useTheme } from '../contexts/ThemeContext';
+import type { ScreenProps } from '../routes/types';
+import { createLoginStyles } from '../styles/loginStyles';
 
-export default function LoginScreen({ navigation }: any) {
-  const [role, setRole] = useState<Role>('usuario');
-  const [identificador, setIdentificador] = useState(''); // email ou cnpj
+export default function LoginScreen({ navigation }: ScreenProps<'Login'>) {
+  const { login } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createLoginStyles(colors), [colors]);
+  const [identificador, setIdentificador] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
 
-async function handleLogin() {
-  if (!identificador || !senha) {
-    Alert.alert('Atenção', 'Preencha e-mail/CNPJ e senha.');
-    return;
+  async function handleLogin() {
+    if (!identificador.trim() || !senha) {
+      Alert.alert('Atenção', 'Preencha e-mail/CNPJ e senha.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await login(identificador.trim(), senha);
+    } catch (error: unknown) {
+      const response = (error as { response?: { data?: { message?: string } | string } })?.response?.data;
+      const message = typeof response === 'string' ? response.trim() : response?.message;
+      Alert.alert('Erro ao entrar', message || 'Não foi possível entrar. Confira seus dados e tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   }
-  setLoading(true);
-  try {
-    await login(identificador, senha);
-    navigation.navigate('Home');
-  } catch (error: any) {
-    Alert.alert('Erro ao entrar', JSON.stringify(error.response?.data ?? error.message));
-  } finally {
-    setLoading(false);
-  }
-}
-
-/*async function handleLogin() {
-  setLoading(true);
-  try {
-    // Simulando um tempo de carregamento para a animação do botão (opcional)
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Ignoramos a validação de email/senha e a chamada na API
-    // Vamos direto para a tela Home
-    navigation.navigate('Home');
-  } catch (error: any) {
-    Alert.alert('Erro ao entrar', error.message);
-  } finally {
-    setLoading(false);
-  }
-}*/
 
   return (
-    <SafeAreaView style={loginStyles.container}>
-      
-      {/* Textos removidos e substituídos pela Logo */}
+    <SafeAreaView style={styles.container}>
       <View style={{ alignItems: 'center', marginBottom: 40, marginTop: 20 }}>
-        <Image 
-          source={require('../../assets/logo.png')} 
-          style={{ width: 160, height: 160, resizeMode: 'contain' }} 
-        />
+        <Image source={require('../../assets/logo.png')} style={{ width: 160, height: 160, resizeMode: 'contain' }} />
       </View>
-
       <InputField
-        icon="mail"
-        placeholder="E-mail ou CNPJ"
-        autoCapitalize="none"
-        value={identificador}
-        onChangeText={setIdentificador}
-        editable={!loading}
+        icon="mail" placeholder="E-mail ou CNPJ" autoCapitalize="none"
+        autoComplete="username" value={identificador} onChangeText={setIdentificador} editable={!loading}
       />
-
       <InputField
-        icon="lock"
-        placeholder="Sua senha"
-        secureTextEntry
-        value={senha}
-        onChangeText={setSenha}
-        editable={!loading}
+        icon="lock" placeholder="Sua senha" secureTextEntry autoComplete="current-password"
+        value={senha} onChangeText={setSenha} editable={!loading} onSubmitEditing={handleLogin}
       />
-
-      {loading ? (
-        <View style={[loginStyles.primaryButton, { marginTop: 8 }]}>
-          <ActivityIndicator color="#FFFFFF" />
-        </View>
-      ) : (
-        <PrimaryButton label="Entrar" onPress={handleLogin} />
-      )}
-
-      <View style={loginStyles.dividerRow}>
-        <View style={loginStyles.dividerLine} />
-        <Text style={loginStyles.dividerText}>ou</Text>
-        <View style={loginStyles.dividerLine} />
+      <PrimaryButton label="Entrar" onPress={handleLogin} loading={loading} />
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} /><Text style={styles.dividerText}>ou</Text><View style={styles.dividerLine} />
       </View>
-
-      <TouchableOpacity style={loginStyles.googleButton} activeOpacity={0.85}>
-        <Icon name="google" size={18} color="#EA4335" style={loginStyles.googleIcon} />
-        <Text style={loginStyles.googleText}>Continuar com Google</Text>
+      <TouchableOpacity
+        style={styles.googleButton}
+        onPress={() => Alert.alert('Em breve', 'O login com Google ainda não está disponível.')}
+        accessibilityRole="button"
+      >
+        <Icon name="google" size={18} color="#EA4335" style={styles.googleIcon} />
+        <Text style={styles.googleText}>Continuar com Google</Text>
       </TouchableOpacity>
-
-      <View style={loginStyles.footerRow}>
-        <Text style={loginStyles.footerText}>Não tem conta? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-          <Text style={loginStyles.footerLink}>Cadastre-se</Text>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>Não tem conta? </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('SignUp')} accessibilityRole="button">
+          <Text style={styles.footerLink}>Cadastre-se</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

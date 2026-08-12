@@ -1,16 +1,30 @@
-import React from 'react';
-import { TouchableOpacity, Text, GestureResponderEvent } from 'react-native';
-import { loginStyles } from '../styles/loginStyles';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, GestureResponderEvent, Text, TouchableOpacity } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
+import { createLoginStyles } from '../styles/loginStyles';
 
 type Props = {
   label: string;
-  onPress: (e: GestureResponderEvent) => void;
+  onPress: (event: GestureResponderEvent) => void;
+  disabled?: boolean;
+  loading?: boolean;
 };
 
-export default function PrimaryButton({ label, onPress }: Props) {
+export default function PrimaryButton({ label, onPress, disabled = false, loading = false }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createLoginStyles(colors), [colors]);
+  const isDisabled = disabled || loading;
   return (
-    <TouchableOpacity style={loginStyles.primaryButton} onPress={onPress} activeOpacity={0.85}>
-      <Text style={loginStyles.primaryButtonText}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.primaryButton, isDisabled && styles.primaryButtonDisabled]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+    >
+      {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{label}</Text>}
     </TouchableOpacity>
   );
 }

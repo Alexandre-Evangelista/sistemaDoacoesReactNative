@@ -21,18 +21,16 @@ class CampanhaService {
     formData.append('nome', data.nome);
     formData.append('descricao', data.descricao);
     formData.append('cnpjOng', data.cnpjOng);
-    if (data.latitude) formData.append('latitude', String(data.latitude));
-    if (data.longitude) formData.append('longitude', String(data.longitude));
+    if (data.latitude != null) formData.append('latitude', String(data.latitude));
+    if (data.longitude != null) formData.append('longitude', String(data.longitude));
 
     formData.append('foto', {
       uri: data.foto.uri,
       name: data.foto.name,
       type: data.foto.type,
-    } as any);
+    } as unknown as Blob);
 
-    const response = await api.post('/campanha/registar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post('/campanha/registar', formData);
 
     return response.data;
   }
