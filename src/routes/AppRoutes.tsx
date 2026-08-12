@@ -10,6 +10,7 @@ import DoacoesScreen from "../screens/DoacoesScreen";
 import EditarPerfilScreen from "../screens/EditarPerfilScreen";
 import ConfiguracoesScreen from "../screens/ConfiguracoesScreen";
 import CampanhaDetalhesScreen from "../screens/CampanhaDetalhesScreen";
+import AlterarFotoScreen from '../screens/AlterarFotoScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +27,7 @@ export default function AppRoutes() {
         <Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
         <Stack.Screen name="Configuracoes" component={ConfiguracoesScreen} />
         <Stack.Screen name="CampanhaDetalhes" component={CampanhaDetalhesScreen} />
+        <Stack.Screen name="AlterarFoto" component={AlterarFotoScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

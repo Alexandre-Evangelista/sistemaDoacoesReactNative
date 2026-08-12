@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import authService, { Usuario, Ong, Role } from '../services/authServices';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type AuthContextData = {
   conta: Usuario | Ong | null;
@@ -8,6 +9,8 @@ type AuthContextData = {
   login: (identificador: string, senha: string) => Promise<void>; 
   logout: () => Promise<void>;
   excluirConta: () => Promise<void>;
+  atualizarFoto: (novaFoto: string) => Promise<void>;
+  atualizarConta: (dados: Partial<Usuario | Ong>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -56,9 +59,20 @@ async function login(identificador: string, senha: string) {
     setConta(null);
     setRole(null);
   }
+  async function atualizarConta(dados: Partial<Usuario | Ong>) {
+    if (!conta) return;
+
+    const contaAtualizada = { ...conta, ...dados };
+    setConta(contaAtualizada);
+    await AsyncStorage.setItem('@app:conta', JSON.stringify(contaAtualizada));
+  }
+
+  async function atualizarFoto(novaFoto: string) {
+    await atualizarConta({ foto: novaFoto });
+  }
 
   return (
-    <AuthContext.Provider value={{ conta, role, loading, login, logout, excluirConta }}>
+    <AuthContext.Provider value={{ conta, role, loading, login, logout, excluirConta, atualizarFoto,atualizarConta  }}>
       {children}
     </AuthContext.Provider>
   );

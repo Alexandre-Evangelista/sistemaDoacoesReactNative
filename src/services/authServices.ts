@@ -115,6 +115,40 @@ class AuthService {
     throw error;
   }
 }
+async atualizarFotoUsuario(email: string, foto: { uri: string; name: string; type: string }) {
+    const formData = new FormData();
+    formData.append('foto', {
+      uri: foto.uri,
+      name: foto.name,
+      type: foto.type,
+    } as any);
+
+    const response = await api.patch(`/usuario/${email}/foto`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data;
+  }
+
+  async atualizarFotoOng(cnpj: string, foto: { uri: string; name: string; type: string }) {
+    const formData = new FormData();
+    formData.append('foto', {
+      uri: foto.uri,
+      name: foto.name,
+      type: foto.type,
+    } as any);
+
+    const response = await api.patch(`/ongs/${cnpj}/foto`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data;
+  }
+
+  async atualizarUsuario(email: string, data: Partial<Omit<Usuario, 'email'>> & { senha?: string }) {
+    const response = await api.put(`/usuario/${email}`, data);
+    return response.data;
+  }
 
 async deleteUsuario(email: string) {
     await api.delete(`/usuario/${email}`);
